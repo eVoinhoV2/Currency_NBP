@@ -5,7 +5,7 @@ from .base import Base
 
 
 class Currency(Base):
-    __tablename__ = "Currency"
+    __tablename__ = "currency"
 
     id = Column("id", UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
     currency = Column("currency", String)

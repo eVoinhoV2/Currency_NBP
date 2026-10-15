@@ -2,7 +2,7 @@ import os
 
 ## Use this configuration to test database localy - DO NOT PUSH!
 os.environ["POSTGRES_USER"] = "postgres"
-os.environ["POSTGRES_PASSWORD"] = "Yamaha-2012"
+os.environ["POSTGRES_PASSWORD"] = "eolimgi"
 os.environ["POSTGRES_HOST"] = "localhost"
 os.environ["POSTGRES_PORT"] = "5432"
 os.environ["POSTGRES_DB"] = "NBP_Curr"
