@@ -1,50 +1,66 @@
-import json
-from app.backend.db.session import get_session
 
-SessionLocal = get_session()
+from sqlalchemy import select
+from app.backend.db.session import SessionLocal
+
 
 class Operations:
-    def __init__(self, objType):
+    def __init__(self, objType, session_factory=SessionLocal):
         self.objType = objType
+        self.session_factory = session_factory
 
     def create(self, obj):
-        with SessionLocal() as session:
-            session.add(obj)
-            session.commit()
-            session.refresh(obj)
+        with self.session_factory() as session:
+            with session.begin():
+                session.add(obj)
+                session.flush()
+                session.refresh(obj)
             return obj
 
     def delete(self, _id) -> bool:
-        with SessionLocal() as session:
-            db_obj = session.query(self.objType).get(_id)
-            if db_obj:
-                session.delete(db_obj)
-                session.commit()
-                return True
-            return False
+        with self.session_factory() as session:
+            with session.begin():
+                db_obj = session.get(self.objType, _id)
+                if db_obj is None:
+                    return False
 
-    def update(self, data: dict, id_attribute_name: str, _id: int):
-        with SessionLocal() as session:
-            result = session.query(self.objType).filter_by(**{id_attribute_name: _id}).update(data)
-            session.commit()
-            if result > 0:
-                return session.query(self.objType).get(_id)
-            else:
-                return None
+                session.delete(db_obj)
+            return True
+
+    def update(self, data: dict, _id: int):
+        if not data:
+            raise ValueError("No fields provided for update")
+
+        with self.session_factory() as session:
+            with session.begin():
+                db_obj = session.get(self.objType, _id)
+                if db_obj is None:
+                    return None
+
+                allowed_fields = {
+                    column.key
+                    for column in self.objType.__table__.columns
+                    if not column.primary_key
+                }
+
+                for key, value in data.items():
+                    if key not in allowed_fields:
+                        raise ValueError(f"Invalid field: {key}")
+                    setattr(db_obj, key, value)
+
+                session.flush()
+                session.refresh(db_obj)
+            return db_obj
 
     def get_all(self):
-        with SessionLocal() as session:
-            return session.query(self.objType).all()
+        with self.session_factory() as session:
+            stmt = select(self.objType)
+            return session.scalars(stmt).all()
 
     def get_by_query(self, query: dict):
-        with SessionLocal() as session:
-            return session.query(self.objType).filter_by(**query).all()
+        with self.session_factory() as session:
+            stmt = select(self.objType).filter_by(**query)
+            return session.scalars(stmt).all()
 
     def get(self, _id):
-        with SessionLocal() as session:
-            return session.query(self.objType).get(_id)
-
-    def jsonToObject(self, json_obj):
-        obj_in_data = json.loads(json_obj)
-        db_obj = self.objType(**obj_in_data)
-        return db_obj
+        with self.session_factory() as session:
+            return session.get(self.objType, _id)

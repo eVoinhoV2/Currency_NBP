@@ -5,9 +5,4 @@ from models.base import Base
 
 
 engine = create_engine(CONNECTION_STRING)
-SessionLocal = sessionmaker(bind=engine, autocommit=False)
-
-
-def get_session():
-    Base.metadata.create_all(bind=engine)
-    return SessionLocal
+SessionLocal = sessionmaker(bind=engine, autocommit=False, expire_on_commit=False)
